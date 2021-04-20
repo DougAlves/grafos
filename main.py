@@ -1,3 +1,7 @@
+import time
+import os
+
+
 class Vertex:
     def __init__(self, key):
         self.key = key
@@ -55,6 +59,7 @@ class Graph:
     def __init__(self, number_of_vertices): 
         self.vertices = self.generateVertices(number_of_vertices)
         self.edges = []
+        self.nun_colors = 0
 
     # OK
     def generateVertices(self, number_of_vertices):
@@ -75,38 +80,7 @@ class Graph:
             self.edges.append((u, v))
         
 
-    # Busca em largura lexicográfica 
-    def lbfs(self):
-        # Conjunto de vértices
-        V = list(self.graph.keys())
-
-        # Conjunto de vértices visitados
-        visitados = set()
-
-        # Ordenação dos vértices de V
-        sigma = [V]
-        while True:
-            con = range(len(sigma))
-            u = [(i, j) for j in con for i in sigma[j] if i not in visitados]
-            if len(u) == 0:
-                break
-            else:
-                u, c = u[0]
-                visitados.add(u)
-                r = []
-                nr = [u]
-                pip = sigma.pop(c)
-                for v in pip:
-                    if v in self.graph[u]:
-                        r.append(v)
-                    elif v != u:
-                        nr.append(v)
-                if len(nr) != 0:
-                    sigma.insert(c, nr)
-                if len(r) != 0:
-                    sigma.insert(c, r)
-        return sigma
-
+    
     # OK
     def todosColoridos(self):
         for vertex in self.vertices.items():
@@ -160,20 +134,80 @@ class Graph:
 
     def printColoredVertices(self):
         for vertex in self.vertices.items():
-                print("Vertex ({}) with color {}".format(vertex[1].key, vertex[1].color))
+            print("Vertex ({}) with color {}".format(vertex[1].key, vertex[1].color))
+    
+    def colorsUsed(self):
+        maior = -1324
+        for vertex in self.vertices.items():
+            maior = max(maior, vertex[1].color)
+        
+        self.nun_colors = maior
+        return maior
 
-g = Graph(10)
-g.addEdge(1, 4)
-g.addEdge(2, 3)
-g.addEdge(2, 1)
-g.addEdge(4, 1)
-g.addEdge(4, 6)
-g.addEdge(1, 7)
-g.addEdge(9, 2)
-g.addEdge(9, 4)
-print("Colorindo")
-print(g.color())
-print("Grafo")
-print(g.printEdges())
-print("Vértices coloridos")
-print(g.printColoredVertices())
+    def writeResults(self, path):
+        f = open(path, 'w')
+        f.write(f'v {len(self.vertices.keys())} x {self.colorsUsed()}\n')
+        for vertex in self.vertices.items():
+            f.write(f'x {vertex[1].key} {vertex[1].color}\n')
+
+        for edge in self.edges:
+            a, b = edge
+            f.write(f"e {a} {b}\n")
+        
+
+def buildGraphUFRN(path):
+    f = open(path, "r")
+    grafo = None
+    for line in f.readlines():
+        if ':' in line:
+            continue
+        if not (' ' in line):
+            grafo = Graph(int(line))
+        else:
+            a, b = (line.split(' ')[0],line.split(' ')[1])
+            a, b = (int(a), int(b))
+            grafo.addEdge(a, b)
+    return grafo
+
+def buildGraphOrLib(path):
+    f = open(path, "r")
+    _, _, nun_v, _ = f.readline().split()
+    nun_v = int(nun_v)
+    grafo = Graph(nun_v)
+    for line in f.readlines():
+        _, a, b = line.split()
+        grafo.addEdge(int(a), int(b))
+    return grafo
+
+ufrn_path = 'datasets/ufrn/'
+orlib_path = 'datasets/or-library/'
+
+
+def apeend_general_table(dataset, nun_colors, delta_time, nun_v):
+    f = open('resultados_gerais.txt', 'a')
+    f.write(f'\n{dataset}, {nun_colors}, {nun_v} , {delta_time}')
+
+
+def testUFRN():
+    for dataset in os.listdir(ufrn_path):
+        g = buildGraphUFRN(ufrn_path + dataset)
+        antes = time.time()
+        g.color()
+        dt = time.time() - antes
+        print(f'{dataset} - {dt}')
+        g.writeResults('datasets/resultados/ufrn/' + dataset)
+        apeend_general_table(dataset, g.nun_colors, dt, len(g.vertices.keys()))
+
+def testOrLib():
+    for dataset in os.listdir(orlib_path):
+        g = buildGraphOrLib(orlib_path + dataset)
+        print('built')
+        antes = time.time()
+        g.color()
+        dt = time.time() - antes
+        print(f'{dataset} - {dt}')
+        g.writeResults('datasets/resultados/or-library/' + dataset)
+        apeend_general_table(dataset, g.nun_colors, dt, len(g.vertices.keys()))
+
+testUFRN()
+testOrLib()
